@@ -3,7 +3,7 @@
 ## Reporting a Vulnerability
 If there any vulnerabilities in MineRust, don't hesitate to report them.
 
-1. Send your report over Discord or E-Mail
+1. Send your report over Discord or [GitHub Advisories](https://github.com/MineRust-Project-Suite/minerust/security/advisories)
 2. Describe the vulnerability with as much detail as possible
 3. If you have a fix, attach the fix to your message.
 4. We evaluate the damage that can be triggered by this vulnerability and based on that we will fix the vulnerability in a certain period of time.
