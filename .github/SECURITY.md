@@ -11,7 +11,7 @@ If there any vulnerabilities in MineRust, don't hesitate to report them.
 
 ## Out-of-Scope Vulnerabilities
 
-- (D)DoS or (Distributed) Denial of Service
+- (D)DoS or (Distributed) Denial of Service over Flood like attacks
 - Flaws in the library implementation in other Projects
 
 ## Supported Versions
