@@ -1,9 +1,14 @@
-use std::io::{Read, Write};
-use std::net::TcpStream;
-use std::time::{Duration, SystemTime};
-use crate::network::connection::{Connection, Pipeline, Writable};
-use crate::network::{ByteOrder, Error, PacketDirection, PacketState};
-use crate::network::buffer::Buffer;
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+    time::{Duration, SystemTime}
+};
+
+use crate::network::{
+    buffer::Buffer,
+    connection::{Connection, Pipeline, Writable},
+    ByteOrder, Error, PacketDirection, PacketState
+};
 
 pub struct SocketConnection<'a> {
     packet_state: PacketState,
@@ -12,9 +17,12 @@ pub struct SocketConnection<'a> {
 }
 
 impl<'a> Connection<'a, TcpStream> for SocketConnection<'a> {
-
     fn new(object: TcpStream, pipeline: Pipeline<'a>) -> Self {
-        SocketConnection { socket: object, pipeline, packet_state: PacketState::Handshaking }
+        SocketConnection {
+            socket: object,
+            pipeline,
+            packet_state: PacketState::Handshaking
+        }
     }
 
     fn write<T: Writable>(&mut self, packet: T) -> Result<usize, Error> {
@@ -28,14 +36,14 @@ impl<'a> Connection<'a, TcpStream> for SocketConnection<'a> {
                             Ok(size) => {
                                 self.socket.flush().unwrap();
                                 Ok(size)
-                            },
-                            Err(error) => Err(Error::other(error.to_string()))
+                            }
+                            Err(error) => Err(Error::Other(error.to_string()))
                         }
-                    },
-                    Err(error) => Err(Error::other(error.to_string()))
+                    }
+                    Err(error) => Err(Error::Other(error.to_string()))
                 }
-            },
-            Err(error) => Err(Error::other(error.to_string()))
+            }
+            Err(error) => Err(Error::Other(error.to_string()))
         }
     }
 
@@ -52,20 +60,17 @@ impl<'a> Connection<'a, TcpStream> for SocketConnection<'a> {
         match self.socket.read(&mut read) {
             Ok(size) => {
                 bytes = read[0..size].to_vec();
-            },
+            }
             Err(error) => {
                 if socket_timeout.is_some() {
                     self.set_timeout(socket_timeout)?;
                 }
-                return Err(Error::not_readable(error.to_string()));
+                return Err(Error::NotReadable(error.to_string()))
             }
         }
 
-        let reached_timeout = time.elapsed();
-        if reached_timeout.is_err() {
-            return Err(Error::other(reached_timeout.err().unwrap().to_string()));
-        }
-        let reached_timeout = reached_timeout.unwrap();
+        let reached_timeout = time.elapsed().map_err(|error| Error::Other(error.to_string()))?;
+
         if socket_timeout.is_some() {
             self.set_timeout(socket_timeout)?;
         }
@@ -80,22 +85,15 @@ impl<'a> Connection<'a, TcpStream> for SocketConnection<'a> {
     fn bound() -> PacketDirection {
         PacketDirection::Clientbound
     }
-
 }
 
 impl<'a> SocketConnection<'a> {
     pub fn set_timeout(&self, timeout: Option<Duration>) -> Result<(), Error> {
-        match self.socket.set_read_timeout(timeout) {
-            Err(error) => Err(Error::other(error.to_string())),
-            Ok(()) => Ok(())
-        }
+        Ok(self.socket.set_read_timeout(timeout)?)
     }
 
     pub fn get_timeout(&self) -> Result<Option<Duration>, Error> {
-        let socket_timeout = self.socket.read_timeout();
-        if socket_timeout.is_err() {
-            return Err(Error::other(socket_timeout.err().unwrap().to_string()));
-        }
-        Ok(socket_timeout.unwrap())
+        let socket_timeout = self.socket.read_timeout()?;
+        Ok(socket_timeout)
     }
 }

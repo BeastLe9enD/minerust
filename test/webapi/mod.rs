@@ -9,7 +9,7 @@ async fn test_username_to_uuid_valid() {
 #[tokio::test]
 async fn test_username_to_uuid_invalid() {
     let uuid = uuid_from_username("NotExistingPlayer").await;
-    assert_eq!(uuid.err().unwrap().code, 15);
+    assert_eq!(uuid.err().unwrap().code(), 15);
 }
 
 #[tokio::test]

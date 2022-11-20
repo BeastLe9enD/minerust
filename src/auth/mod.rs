@@ -1,4 +1,5 @@
 use std::time::Duration;
+
 use uuid::Uuid;
 
 // TODO: Implement legacy authentication with Mojang

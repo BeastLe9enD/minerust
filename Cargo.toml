@@ -9,11 +9,11 @@ keywords = ["minecraft", "protocol", "implementation"]
 repository = "https://github.com/MineRust-Project-Suite/MineRust"
 homepage = "https://minerust.cach30verfl0w.de"
 readme = "README.md"
-license = "Apache-2.0 License"
+license = "Apache-2.0"
 categories = ["minecraft"]
-license-file = "LICENSE.md"
 
 [features]
+default = ["network", "webapi", "auth", "web", "components"]
 network = []
 webapi = ["web"]
 auth = ["web"]
@@ -21,12 +21,13 @@ web = []
 components = []
 
 [dependencies]
-serde_json = "1.0.88"
 paste = "1.0.9"
-uuid = "1.2.2"
+rand = "0.8.5"
 reqwest = { version = "0.11.13", features = ["json"] }
-tokio = { version = "1.22.0", features = ["rt-multi-thread", "macros"] }
 serde = { version = "1.0.147", features = ["derive"] }
+serde_json = "1.0.88"
+thiserror = "1.0.37"
+tokio = { version = "1.22.0", features = ["rt-multi-thread", "macros"] }
+uuid = "1.2.2"
 warp = "0.3.3"
 webbrowser = "0.8.2"
-rand = "0.8.5"

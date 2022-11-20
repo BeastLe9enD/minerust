@@ -1,4 +1,5 @@
 use std::mem::size_of;
+
 use crate::network::{ByteOrder, Error};
 
 const LAST_SEVEN_BITS: i32 = 0b01111111;
@@ -37,7 +38,7 @@ macro_rules! var_int {
                 Ok(value)
             }
         }
-    }
+    };
 }
 
 macro_rules! buffer_method {
@@ -69,7 +70,7 @@ macro_rules! buffer_method {
                 })
             }
         }
-    }
+    };
 }
 
 #[derive(Clone, Debug)]
@@ -90,7 +91,12 @@ impl Buffer {
     }
 
     pub fn cloned_metadata(&self) -> Self {
-        Self { data: Vec::new(), writable: self.writable, order: self.order.clone(), position: 0 }
+        Self {
+            data: Vec::new(),
+            writable: self.writable,
+            order: self.order.clone(),
+            position: 0
+        }
     }
 
     pub fn write_all(&mut self, bytes: Vec<u8>) {
@@ -101,7 +107,7 @@ impl Buffer {
 
     pub fn write_u8(&mut self, value: u8) -> Result<(), Error> {
         if !self.writable() {
-            return Err(Error::not_writable("Buffer"));
+            return Err(Error::NotWritable("Buffer".to_owned()))
         }
 
         self.data.push(value);

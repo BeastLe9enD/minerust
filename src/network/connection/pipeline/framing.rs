@@ -1,10 +1,6 @@
-use crate::network::buffer::Buffer;
-use crate::network::connection::Writable;
-use crate::network::Error;
+use crate::network::{buffer::Buffer, connection::Writable, Error};
 
-pub struct FrameEncoder {
-
-}
+pub struct FrameEncoder {}
 
 impl Writable for FrameEncoder {
     fn write(&self, buffer: Buffer) -> Result<Buffer, Error> {

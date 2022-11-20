@@ -1,8 +1,8 @@
-use std::mem::size_of;
-use std::time::Duration;
+use std::{mem::size_of, time::Duration};
+
 use uuid::Uuid;
-use crate::network::buffer::Buffer;
-use crate::network::{ByteOrder, Error, PacketDirection, PacketState};
+
+use crate::network::{buffer::Buffer, ByteOrder, Error, PacketDirection, PacketState};
 
 pub mod pipeline;
 pub mod socket;
@@ -23,7 +23,6 @@ pub struct Pipeline<'a> {
 }
 
 impl<'a> Pipeline<'a> {
-
     pub fn add_last_encoder(mut self, encoder: impl Writable + 'static, name: Option<&'a str>) -> Self {
         self.encoder_pipeline.push((name, Box::new(encoder)));
         self
@@ -53,7 +52,10 @@ impl<'a> Pipeline<'a> {
 
 impl<'a> Pipeline<'a> {
     pub fn new() -> Self {
-        Self { encoder_pipeline: Vec::new(), decoder_pipeline: Vec::new() }
+        Self {
+            encoder_pipeline: Vec::new(),
+            decoder_pipeline: Vec::new()
+        }
     }
 }
 
@@ -62,7 +64,9 @@ pub trait Writable {
 }
 
 pub trait Readable {
-    fn read(buffer: Buffer) -> Result<Self, Error> where Self: Sized;
+    fn read(buffer: Buffer) -> Result<Self, Error>
+    where
+        Self: Sized;
 }
 
 macro_rules! define_type_io {
@@ -81,7 +85,7 @@ macro_rules! define_type_io {
                 }
             }
         }
-    }
+    };
 }
 
 macro_rules! define_var_int {
@@ -104,7 +108,7 @@ macro_rules! define_var_int {
                 }
             }
         }
-    }
+    };
 }
 
 define_var_int!(i32);
@@ -129,7 +133,10 @@ impl Writable for Uuid {
 }
 
 impl Readable for Uuid {
-    fn read(mut buffer: Buffer) -> Result<Self, Error> where Self: Sized {
+    fn read(mut buffer: Buffer) -> Result<Self, Error>
+    where
+        Self: Sized
+    {
         let most_significant_bits = buffer.read_u64()?;
         let least_significant_bits = buffer.read_u64()?;
         Ok(Uuid::from_u64_pair(most_significant_bits, least_significant_bits))
@@ -147,10 +154,13 @@ impl<T: Writable> Writable for Vec<T> {
 }
 
 impl<T: Readable> Readable for Vec<T> {
-    fn read(mut buffer: Buffer) -> Result<Self, Error> where Self: Sized {
+    fn read(mut buffer: Buffer) -> Result<Self, Error>
+    where
+        Self: Sized
+    {
         let length = buffer.read_var_i32()?;
         if length < 0 {
-            return Err(Error::other("Unable to read array with negative length!".to_string()));
+            return Err(Error::Other("Unable to read array with negative length!".to_string()))
         }
 
         let mut vector: Vec<T> = Vec::new();
@@ -170,7 +180,10 @@ impl Writable for String {
 }
 
 impl Readable for String {
-    fn read(mut buffer: Buffer) -> Result<Self, Error> where Self: Sized {
+    fn read(mut buffer: Buffer) -> Result<Self, Error>
+    where
+        Self: Sized
+    {
         buffer.read_string()
     }
 }
