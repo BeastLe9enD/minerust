@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::mpsc;
 use std::time::Duration;
@@ -53,6 +54,97 @@ pub enum TokenType {
     XSLS,
     User
 }
+
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub enum MinecraftEdition {
+    Java,
+    Bedrock
+}
+
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub enum XSTSErrorType {
+    NoXboxAccount,
+    XboxBannedOrNotAvailable,
+    NeedsAdultVerification,
+    AccountIsChild
+}
+
+impl Display for XSTSErrorType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            XSTSErrorType::AccountIsChild => write!(f, "The account is a child (under 18)"),
+            XSTSErrorType::NeedsAdultVerification => write!(f, "The account needs adult verification on XboxPage (South Korea)"),
+            XSTSErrorType::XboxBannedOrNotAvailable => write!(f, "The account is from a country where Xbox Live is not available/banned"),
+            XSTSErrorType::NoXboxAccount => write!(f, "The account doesn't have a Xbox account. Once they sign up for one then they can proceed with the login")
+        }
+    }
+}
+
+impl XSTSErrorType {
+    pub fn from_u64(value: u64) -> Self {
+        match value {
+            2148916233 => Self::NoXboxAccount,
+            2148916235 => Self::XboxBannedOrNotAvailable,
+            2148916236 | 2148916237 => Self::NeedsAdultVerification,
+            2148916238 => Self::AccountIsChild,
+            _ => panic!("Got illegal error {} from XSTS Token Endpoint", value)
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub struct XSTSTokenError {
+    pub identity: u16,
+    pub error_code: u64,
+    pub error_type: XSTSErrorType,
+    pub redirect: String,
+    pub message: String
+}
+
+impl Display for XSTSTokenError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({}) => {}", self.error_type, self.error_code, self.redirect)
+    }
+}
+
+#[derive(Debug)]
+pub struct XSTSError {
+    token_error: Option<XSTSTokenError>,
+    error_text: Option<String>,
+    pub error_code: Option<u8>
+}
+
+impl Display for XSTSError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.token_error.clone().is_none() {
+            write!(f, "{}", self.token_error.clone().unwrap())
+        } else {
+            write!(f, "{}", self.error_text.clone().unwrap())
+        }
+    }
+}
+
+impl XSTSError {
+
+    pub fn token_error(token_error: XSTSTokenError) -> Self {
+        Self { token_error: Some(token_error), error_code: None, error_text: None }
+    }
+
+    pub fn normal(text: String, code: u8) -> Self {
+        Self { token_error: None, error_code: Some(code), error_text: Some(text) }
+    }
+
+    pub fn to_error(&self) -> Result<Error, ()> {
+        if self.token_error.is_some() {
+            return Err(());
+        }
+
+        Ok(Error::new(self.error_text.clone().unwrap(), self.error_code.unwrap()))
+    }
+
+}
+
+impl std::error::Error for XSTSError {}
 
 impl<'a> MicrosoftAuthenticator<'a> {
 
@@ -150,8 +242,7 @@ impl<'a> MicrosoftAuthenticator<'a> {
     //    "XErr": 2148916238,
     //    "Message": "",
     //    "Redirect: "https://start.ui.xboxlive.com/AddChildToFamily"
-    // TODO: Add Support for Bedrock with RelyingParty of https://pocket.realms.minecraft.net/
-    pub async fn request_xsts_token(&self, auth_token: AuthToken) -> Result<AuthToken, Error> {
+    pub async fn request_xsts_token(&self, auth_token: AuthToken, edition: MinecraftEdition) -> Result<AuthToken, XSTSError> {
         let json = json!({
             "Properties": {
                 "SandboxId": "RETAIL",
@@ -159,21 +250,34 @@ impl<'a> MicrosoftAuthenticator<'a> {
                     auth_token.token
                 ]
             },
-            "RelyingParty": "rp://api.minecraftservices.com/",
+            "RelyingParty": if edition == MinecraftEdition::Java {
+                "rp://api.minecraftservices.com/"
+            } else {
+                "https://pocket.realms.minecraft.net/"
+            },
             "TokenType": "JWT"
         });
 
         let requester = Requester::post_str("https://xsts.auth.xboxlive.com/xsts/authorize")
             .json(&json).execute().await;
         if requester.is_err() {
-            return Err(Error::new(format!("Unable to authenticate => {}", requester.err().unwrap()), 7));
+            return Err(XSTSError::normal(format!("Unable to authenticate => {}", requester.err().unwrap()), 7));
         }
 
         let json: serde_json::error::Result<Value> = serde_json::from_str(&requester.unwrap());
         if json.is_err() {
-            return Err(Error::new(format!("Unable to parse auth response => {}", json.err().unwrap()), 8));
+            return Err(XSTSError::normal(format!("Unable to parse auth response => {}", json.err().unwrap()), 8));
         }
         let json = json.unwrap();
+        if json.get("Token").is_none() {
+            return Err(XSTSError::token_error(XSTSTokenError {
+                error_code: json["XErr"].as_u64().unwrap(),
+                error_type: XSTSErrorType::from_u64(json["XErr"].as_u64().unwrap()),
+                redirect: json["Redirect"].to_string(),
+                identity: str::parse::<u16>(&json["Identity"].to_string()).unwrap(),
+                message: json["Message"].to_string()
+            }));
+        }
 
         Ok(AuthToken {
             token: json["Token"].to_string().replace("\"", ""),
