@@ -3,6 +3,16 @@ name = "minerust"
 version = "1.0.0-dev.1"
 edition = "2021"
 
+description = "Library to abstract and implement the protocol and logic of the Minecraft Java Edition"
+authors = ["Cach30verfl0w <cach30verfl0w@gmail.com>"]
+keywords = ["minecraft", "protocol", "implementation"]
+repository = "https://github.com/MineRust-Project-Suite/MineRust"
+homepage = "https://minerust.cach30verfl0w.de"
+readme = "README.md"
+license = "Apache-2.0 License"
+categories = ["minecraft"]
+license-file = "LICENSE.md"
+
 [features]
 network = []
 webapi = ["web"]
